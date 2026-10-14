@@ -1,0 +1,70 @@
+{
+    "BOTNAME": "sagor bot",
+    "PREFIX": ".",
+    "reactBy": {
+        "enable": true,
+        "unsend": [
+            "😡",
+            "🤬",
+            "😠",
+            "😾"
+        ],
+        "kick": [
+        "🖕",
+        "🦶",
+        "🦵",
+        "💋"
+        ]
+    },
+    "whiteListMode": {
+        "enable": false,
+        "whiteListIds": []
+    },
+    "whiteListModeThread": {
+        "enable": false,
+        "whiteListThreadIds": []
+    },
+    "dashBoard": {
+        "enable": false,
+        "port": 12001
+    },
+    "telegram": {
+        "enable": true,
+        "botToken": "",
+        "chatId": ""
+    },
+    "language": "en",
+    "publicMode": true,
+    "ADMINBOT": [
+        "61581197276223"
+    ],
+    "NDH": [
+        "61581197276223"
+    ],
+    "FACEBOOK_ADMIN": "",
+    "BOXADMIN": "61581197276223",
+    "DeveloperMode": false,
+    "autoCreateDB": true,
+    "allowInbox": true,
+    "commandDisabled": [],
+    "eventDisabled": [],
+    "menu": {
+        "autoUnsend": {
+            "status": true,
+            "timeOut": 60
+        }
+    },
+    "FCAOption": {
+        "autoMarkDelivery": false,
+        "autoReconnect": true,
+        "forceLogin": true,
+        "listenEvents": true,
+        "listenTyping": true,
+        "logLevel": "error",
+        "selfListen": false,
+        "selfListenEvent": true,
+        "updatePresence": true
+    },
+    "version": "3.0.0",
+    "autoInstallMissingPackages": true
+}
