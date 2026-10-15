@@ -1,0 +1,15 @@
+c_user=61595610500794;
+datr=2GDParltnk2KwxJtoDmkp0xG;
+fr=0n2GkiHvlhEVmgOES.AWdlMlxcXYGj4pcAmvx-p8SmQbmGScQnyq9DL1tIr1Fek6GFDXM.Bqz2DY..AAA.0.0.Bqz2lr.AWdXy4jNPZGYSfJyw4kvvyBUhw4;
+sb=2GDPaoT2l2T2l8MUGeBDcgSE;
+wd=360x800;
+xs=1%3AaiSJcyCxC42THw%3A2%3A1791975710%3A-1%3A-1;
+dbln=%7B%2261595610500794%22%3A%22F4obTj34%22%7D;
+fbl_st=100632705%3BT%3A29866262;
+locale=en_GB;
+m_pixel_ratio=2;
+pas=61595610500794%3Ajo0rZpu2WO;
+ps_l=1;
+ps_n=1;
+vpd=v1%3B664x360x2;
+wl_cbv=v2%3Bclient_version%3A3321%3Btimestamp%3A1791975760;
