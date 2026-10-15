@@ -4,7 +4,7 @@ const activeMurgi = new Map();
 
 module.exports = {
   config: {
-    name: "murgi 2",
+    name: "murgi2",
     version: "1.1.0",
     role: 2,
     author: "SagoR",
