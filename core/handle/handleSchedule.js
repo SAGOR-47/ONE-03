@@ -7,7 +7,7 @@ const logger = require('../utils/log');
 module.exports = function ({ api, Threads }) {
   cron.schedule('*/10 * * * *', async () => {
    try {
-    const cc = path.join(__dirname, '..', '..', 'utils', 'data', 'check_data.json');
+    const cc = path.join(__dirname, '..', 'utils', 'data', 'check_data.json');
     const currentTime = moment().tz('Asia/Dhaka').format('YYYY-MM-DD HH:mm:ss');
     let lastRunTime = null;
     if (fs.existsSync(cc)) {
@@ -26,6 +26,7 @@ module.exports = function ({ api, Threads }) {
             }
         }
         if (dataChanged) {
+            fs.mkdirSync(path.dirname(cc), { recursive: true });
             fs.writeFileSync(cc, JSON.stringify({ datetime: currentTime }));
             logger(`Auto updating data of ${groupList.length} threads`, '[ DATA ] >');
         }

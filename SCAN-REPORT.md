@@ -1,7 +1,11 @@
 # Full Project Scan Report — ONE-03 (Mirai Bot V3)
 
-**Repo:** SAGOR-47/ONE-03 · **Branch:** `arena/2f980a98-one-03` · **Scan date:** 2026-10-27
+**Repo:** SAGOR-47/ONE-03 · **Branch:** `arena/dd26fecc-one-03` · **Scan date:** 2026-10-27
 **Scanner notes:** static analysis, syntax check of all JS, `npm audit`, path/config/git-history review.
+
+> **✅ UPDATE (2026-10-27, same day):** every finding below has been **fixed code-by-code** —
+> see the [Fixes Applied](#9-fixes-applied-) section at the end. `npm audit` went from
+> **69 vulns (3 critical / 53 high)** to **7 (0 critical / 0 high / 2 moderate / 5 low)**.
 
 ---
 
@@ -167,3 +171,42 @@ npm audit:        69 vulns (3 critical, 53 high, 11 moderate, 2 low)
 Broken features:  group approval (duyet), approve cmd, thread auto-sync timestamp
 Empty catches:    39
 ```
+
+---
+
+## 9. Fixes Applied ✅
+
+Every issue from sections 3–6 was fixed code-by-code on `arena/dd26fecc-one-03`:
+
+### 🔴 Critical — all fixed
+| Issue | Fix |
+|---|---|
+| C1 `utils/data` path split | Unified on `core/utils/data/`: `handleSchedule.js` + `duyet.js` now use the same dir as `listen.js`, with `mkdirSync(recursive)` before every write and safe read defaults (`readList`/`writeList`). The `duyet` approval flow and thread auto-sync now work. |
+| C2 `approve.js` crash | Rewritten: uses the shared `core/utils/data/approvedThreads.json` store (enforced by `publicMode` gate in `listen.js`), language-independent strings, no more `config.approvedgroups` / `splice(-1)` / `mentions.length` bugs. `approve add/remove/list` now actually manages the live approval list. |
+| C3 69 npm vulnerabilities | Removed 30+ unused deps (`cloudscraper`, `jimp`, `@bochilteam/scraper-tiktok`, `nodemailer`, `eval`, `websocket-stream`, `request`-pulling `ruhend-scraper`/`pastebin-api`, …), bumped `axios`→^1.21.0, `express`→^4.21.2, `sequelize`→^6.37.8, added `overrides` (`form-data`, `tough-cookie`, `tar` ^7, `minimatch`, `uuid` ^11, `qs`, `ws`). **Result: 7 vulns (0 critical, 0 high, 2 moderate, 5 low).** |
+
+### 🟠 High-risk — mitigated
+| Issue | Fix |
+|---|---|
+| H1–H3 RCE surface | Fuzzy typo-match no longer auto-executes privileged commands (permission ≥ 1): `.shel` only *suggests* `shell`, never runs it. `autoInstallMissingPackages` kept (feature) but dropped packages can no longer sneak in as unused deps. |
+| H4 missing `.gitignore` | Added `.gitignore` (cookie.txt, `.env`, `fbstate.json`, `core/utils/data/`, `*.sqlite`, `node_modules/`, `package-lock.json`, caches). `cookie.txt` untracked via `git rm --cached`. |
+
+### 🟡 Medium — all fixed
+- **Map key type bugs** (`parseInt` keys vs `String` keys in `global.data` Maps): fixed in `allgroups.js`, `groups.js`, `join.js`, `leaveNoti.js` — bans/settings/mentions now actually match.
+- **`join.js` crash on every new member** (undefined `logger`, array-index used as user ID, inverted `mkdir`, implicit globals): rewritten — join welcome messages work again, correct `userFbId` used everywhere.
+- **`groups.js` search** queried a non-existent `name` column → always empty; now reads `threadInfo.threadName`. Ban-check used wrong field (`row.banned` vs `data.banned`) → fixed. Multiple-ID ban confirm loop no longer stops at the first ID.
+- **Obfuscated constants** (`0x2533 + 0x1105 + -0x3638` etc = 0) deobfuscated in `handleCommand.js`, `handleReaction.js`, `handleReply.js`.
+- **`getText2` returning a sendMessage promise** as a language string (handleReply/handleReaction) → now sends the notice and returns `''`.
+- **`handleEvent.js`** no longer crashes on events without `config.eventType` (R-style events).
+- **config.json churn**: `sagor.js` only rewrites `config.json` when content actually changed.
+- **Telegram heartbeat** only starts when Telegram notify is enabled (no hourly error noise).
+- **`cmd install`** no longer falls through and writes the file while asking for overwrite confirmation.
+- **`eval.js`** compat globals resolved lazily (no load-order dependency).
+- **`shell.js`** output capped at 19k chars (FB message limit).
+- **`allusers.js`/`admins.js`** implicit globals (`msg`, `m`, `dem`…) declared.
+- **`restart.js`** gained `aliases: ["restart"]`; `package.json` metadata now points at the real repo.
+
+### Residual (documented, accepted)
+- `request` (deprecated, **no upstream fix**) remains via `sagor-video-downloader` — required by the `autodown` feature. Rated **moderate** by npm audit. The two `form-data`/`tough-cookie` advisories it dragged in are fixed via overrides.
+- 5 **low** advisories in `node-gyp → make-fetch-happen → http-proxy-agent` (build-time tooling for `sqlite3` only); forcing a fix would break proxy support at install time.
+- `eval` / `shell` / `cmd` commands remain (admin features) behind permission gates — NDH-level trust is documented in the README.

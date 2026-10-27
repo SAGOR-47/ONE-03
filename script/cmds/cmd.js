@@ -296,6 +296,7 @@ module.exports.run = async function ({ api, event, args }) {
 └─❖`,
           threadID,
           (err, info) => {
+            if (err || !info) return;
             global.client.handleReaction.push({
               name: this.config.name,
               author: event.senderID,
@@ -307,6 +308,7 @@ module.exports.run = async function ({ api, event, args }) {
           },
           messageID
         );
+        return;
       }
 
 

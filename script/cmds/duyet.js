@@ -13,20 +13,29 @@ module.exports.config = {
   prefix: true
 };
 
-const dataPath = path.resolve(__dirname, "../../utils/data/approvedThreads.json");
-const dataPendingPath = path.resolve(__dirname, "../../utils/data/pendingThreads.json");
+const dataPath = path.resolve(__dirname, "../../core/utils/data/approvedThreads.json");
+const dataPendingPath = path.resolve(__dirname, "../../core/utils/data/pendingThreads.json");
+
+function readList(file) {
+  try { return JSON.parse(fs.readFileSync(file, "utf8")) || []; }
+  catch (e) { return []; }
+}
+function writeList(file, list) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(list, null, 2));
+}
 
 module.exports.handleReply = async function ({ event, api, handleReply }) {
   if (handleReply.author !== event.senderID) return;
   const { body, threadID, messageID } = event;
-  let approvedThreads = JSON.parse(fs.readFileSync(dataPath));
-  let pendingThreads = JSON.parse(fs.readFileSync(dataPendingPath));
+  let approvedThreads = readList(dataPath);
+  let pendingThreads = readList(dataPendingPath);
 
   if (handleReply.type === "pending") {
     if (body.trim().toLowerCase() === "all") {
       approvedThreads = approvedThreads.concat(pendingThreads);
-      fs.writeFileSync(dataPath, JSON.stringify(approvedThreads, null, 2));
-      fs.writeFileSync(dataPendingPath, JSON.stringify([], null, 2));
+      writeList(dataPath, approvedThreads);
+      writeList(dataPendingPath, []);
       pendingThreads.forEach(id => {
         api.sendMessage("✅ Your group has been approved!\n📝 Have fun using the bot", id);
       });
@@ -47,8 +56,8 @@ module.exports.handleReply = async function ({ event, api, handleReply }) {
       }
     }
 
-    fs.writeFileSync(dataPath, JSON.stringify(approvedThreads, null, 2));
-    fs.writeFileSync(dataPendingPath, JSON.stringify(pendingThreads, null, 2));
+    writeList(dataPath, approvedThreads);
+    writeList(dataPendingPath, pendingThreads);
 
     return successCount > 0
       ? api.sendMessage(`✅ Successfully approved ${successCount} groups`, threadID, messageID)
@@ -63,7 +72,7 @@ module.exports.handleReply = async function ({ event, api, handleReply }) {
         removedIDs.push(idBox);
         try { await api.removeUserFromGroup(api.getCurrentUserID(), idBox); } catch (e) {}
       }
-      fs.writeFileSync(dataPath, JSON.stringify(approvedThreads, null, 2));
+      writeList(dataPath, approvedThreads);
       return api.sendMessage(`✅ Removed boxes:\n${removedIDs.join(", ")}`, threadID, messageID);
     }
     return api.sendMessage("❎ No groups to delete", threadID, messageID);
@@ -72,8 +81,8 @@ module.exports.handleReply = async function ({ event, api, handleReply }) {
 
 module.exports.run = async ({ event, api, args, Threads }) => {
   const { threadID, messageID } = event;
-  let approvedThreads = JSON.parse(fs.readFileSync(dataPath));
-  let pendingThreads = JSON.parse(fs.readFileSync(dataPendingPath));
+  let approvedThreads = readList(dataPath);
+  let pendingThreads = readList(dataPendingPath);
   let idBox = args[0] ? args[0] : threadID;
 
   if (args[0] === "list" || args[0] === "l") {
@@ -128,7 +137,7 @@ module.exports.run = async ({ event, api, args, Threads }) => {
       return api.sendMessage("❎ Group was not approved before", threadID, messageID);
     }
     approvedThreads = approvedThreads.filter(id => id !== idBox);
-    fs.writeFileSync(dataPath, JSON.stringify(approvedThreads, null, 2));
+    writeList(dataPath, approvedThreads);
     await api.removeUserFromGroup(api.getCurrentUserID(), idBox);
     return api.sendMessage(`✅ Group ${idBox} has been removed from the list`, threadID, messageID);
   }
@@ -143,8 +152,8 @@ module.exports.run = async ({ event, api, args, Threads }) => {
 
   approvedThreads.push(idBox);
   pendingThreads = pendingThreads.filter(id => id !== idBox);
-  fs.writeFileSync(dataPath, JSON.stringify(approvedThreads, null, 2));
-  fs.writeFileSync(dataPendingPath, JSON.stringify(pendingThreads, null, 2));
+  writeList(dataPath, approvedThreads);
+  writeList(dataPendingPath, pendingThreads);
   api.sendMessage("✅ Your group has been approved!\n📝 Have fun using the bot", idBox);
   return api.sendMessage(`✅ Successfully approved groups ${idBox}`, threadID, messageID);
 };

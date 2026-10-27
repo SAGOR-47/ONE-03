@@ -14,10 +14,12 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
                 if (handleNeedExec.languages && typeof handleNeedExec.languages == 'object') 
                 	getText2 = (...value) => {
                     const react = handleNeedExec.languages || {};
-                    if (!react.hasOwnProperty(global.config.language)) 
-                    	return api.sendMessage(global.getText('handleCommand', 'notFoundLanguage', handleNeedExec.config.name, global.config.language), threadID, messageID);
+                    if (!react.hasOwnProperty(global.config.language)) {
+                    	api.sendMessage(global.getText('handleCommand', 'notFoundLanguage', handleNeedExec.config.name, global.config.language), threadID, messageID);
+                    	return '';
+                    }
                     var lang = handleNeedExec.languages[global.config.language][value[0]] || '';
-                    for (var i = value.length; i > 0x2 * -0xb7d + 0x2111 * 0x1 + -0xa17; i--) {
+                    for (var i = value.length; i > 0; i--) {
                         const expReg = RegExp('%' + i, 'g');
                         lang = lang.replace(expReg, value[i]);
                     }

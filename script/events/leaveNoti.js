@@ -30,11 +30,11 @@ module.exports.run = async function ({ api, event, Users, Threads }) {
         if (iduser == api.getCurrentUserID()) return;
         const moment = require("moment-timezone");
         const time = moment.tz("Asia/Dhaka").format("DD/MM/YYYY || HH:mm:ss");
-        const threadDataCache = global.data.threadData.get(parseInt(threadID));
+        const threadDataCache = global.data.threadData.get(String(threadID));
         const data = threadDataCache || (await Threads.getData(threadID)).data;
         const userData = await Users.getData(event.author);
         const nameAuthor = userData.name || "";
-        const name = global.data.userName.get(iduser) || await Users.getNameUser(iduser);
+        const name = global.data.userName.get(String(iduser)) || await Users.getNameUser(String(iduser));
 
         const type = (event.author == iduser) ? "left the group" : `was kicked by ${nameAuthor}`;
 

@@ -284,7 +284,14 @@ async function onBot({ models }) {
                 `🕐 ${moment.tz("Asia/Dhaka").format("HH:mm:ss DD/MM/YYYY")}`
             ).catch(() => {});
         } catch (e) {}
-        writeFileSync('./config.json', JSON.stringify(global.config, null, 4), 'utf8');
+        // only rewrite config.json when the content actually changed (avoids git churn)
+        try {
+            const newCfg = JSON.stringify(global.config, null, 4);
+            const oldCfg = existsSync('./config.json') ? readFileSync('./config.json', 'utf8') : '';
+            if (newCfg !== oldCfg) writeFileSync('./config.json', newCfg, 'utf8');
+        } catch (e) {
+            writeFileSync('./config.json', JSON.stringify(global.config, null, 4), 'utf8');
+        }
         const listener = require('./listen')({ api, models });
         let reconnectTimer = null;
         const scheduleReconnect = () => {
@@ -333,11 +340,13 @@ async function onBot({ models }) {
         }
         connect_mqtt();
 
-        setInterval(() => {
-            try {
-                telegram.send(`⏰ Hourly check\n\n✅ Bot is running\n🕐 Uptime: ${telegram.formatUptime()}`).catch(() => {});
-            } catch (e) {}
-        }, 3600000);
+        if (telegram.isEnabled()) {
+            setInterval(() => {
+                try {
+                    telegram.send(`⏰ Hourly check\n\n✅ Bot is running\n🕐 Uptime: ${telegram.formatUptime()}`).catch(() => {});
+                } catch (e) {}
+            }, 3600000);
+        }
     });
 }
 (async() => {
