@@ -1,7 +1,7 @@
 module.exports.config = {
 	name: "joinNoti",
 	eventType: ["log:subscribe"],
-	version: "1.0.3",
+	version: "1.0.4",
 	credits: "Mirai Team",
 	description: "Notify when bot or someone joins the group",
 	dependencies: {
@@ -9,7 +9,9 @@ module.exports.config = {
 	}
 };
 
-module.exports.run = async function({ api, event, Users }) {
+const logger = require("../../core/utils/log.js");
+
+module.exports.run = async function ({ api, event, Users }) {
 	const { join } = global.nodemodule["path"];
 	const { threadID } = event;
 	if (event.logMessageData.addedParticipants.some(i => i.userFbId == api.getCurrentUserID())) {
@@ -21,14 +23,15 @@ module.exports.run = async function({ api, event, Users }) {
 			const { createReadStream, existsSync, mkdirSync } = global.nodemodule["fs-extra"];
 			let { threadName, participantIDs } = await api.getThreadInfo(threadID);
 
-			const threadData = global.data.threadData.get(parseInt(threadID)) || {};
+			const threadData = global.data.threadData.get(String(threadID)) || {};
 			const path = join(__dirname, "cache", "joinGif");
 			const pathGif = join(path, `${threadID}.gif`);
 
 			var mentions = [], nameArray = [], memLength = [], i = 0;
 
-			for (id in event.logMessageData.addedParticipants) {
-				const userName = event.logMessageData.addedParticipants[id].fullName;
+			for (const participant of event.logMessageData.addedParticipants) {
+				const id = String(participant.userFbId);
+				const userName = participant.fullName;
 				nameArray.push(userName);
 				mentions.push({ tag: userName, id });
 				memLength.push(participantIDs.length - i++);
@@ -41,15 +44,18 @@ module.exports.run = async function({ api, event, Users }) {
 			}
 			memLength.sort((a, b) => a - b);
 
-			(typeof threadData.customJoin == "undefined") ? msg = "👋Welcome {name}.\nWelcome to {threadName}.\n{type} is member #{soThanhVien} of the group 🥳" : msg = threadData.customJoin;
+			let msg = (typeof threadData.customJoin == "undefined")
+				? "👋Welcome {name}.\nWelcome to {threadName}.\n{type} is member #{soThanhVien} of the group 🥳"
+				: threadData.customJoin;
 			msg = msg
-			.replace(/\{name}/g, nameArray.join(', '))
-			.replace(/\{type}/g, (memLength.length > 1) ?  'guys' : 'you')
-			.replace(/\{soThanhVien}/g, memLength.join(', '))
-			.replace(/\{threadName}/g, threadName);
+				.replace(/\{name}/g, nameArray.join(', '))
+				.replace(/\{type}/g, (memLength.length > 1) ? 'guys' : 'you')
+				.replace(/\{soThanhVien}/g, memLength.join(', '))
+				.replace(/\{threadName}/g, threadName);
 
-			if (existsSync(path)) mkdirSync(path, { recursive: true });
+			if (!existsSync(path)) mkdirSync(path, { recursive: true });
 
+			let formPush;
 			if (existsSync(pathGif)) formPush = { body: msg, attachment: createReadStream(pathGif), mentions }
 			else formPush = { body: msg, mentions }
 

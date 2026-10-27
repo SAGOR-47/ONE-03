@@ -1,6 +1,7 @@
 module.exports.config = {
 	name: "re",
-	version: "7.0.0",
+	aliases: ["restart"],
+	version: "7.0.1",
 	permission: 3,
 	credits: "Sagor",
 	prefix: false,

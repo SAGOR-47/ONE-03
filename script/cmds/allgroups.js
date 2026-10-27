@@ -28,14 +28,14 @@ module.exports.handleReply = async function({ api, event, args, Threads, handleR
           const data = (await Threads.getData(idgr)).data || {};
           data.banned = 1;
           await Threads.setData(idgr, { data });
-          global.data.threadBanned.set(parseInt(idgr), 1);
+          global.data.threadBanned.set(String(idgr), { reason: '', dateAdded: '' });
           api.sendMessage(`successfully banned group id : ${idgr}`, event.threadID, event.messageID);
           break;
         }
 
         if (arg[0] == "out" || arg[0] == "Out") {
           api.removeUserFromGroup(`${api.getCurrentUserID()}`, idgr);
-          api.sendMessage("out thread with id : " + idgr + "\n" + (await Threads.getData(idgr)).name, event.threadID, event.messageID);
+          api.sendMessage("out thread with id : " + idgr + "\n" + (((await Threads.getData(idgr)) || {}).threadInfo || {}).threadName, event.threadID, event.messageID);
           break;
         }
 
@@ -75,13 +75,14 @@ module.exports.run = async function({ api, event, client, botid }) {
     groupid.push(group.id);
   }
 
-  api.sendMessage(msg + 'reply "out" or "ban" the number of order to out or ban that thread!!', event.threadID, (e, data) =>
+  api.sendMessage(msg + 'reply "out" or "ban" the number of order to out or ban that thread!!', event.threadID, (e, data) => {
+    if (e || !data) return;
     global.client.handleReply.get(botid).push({
       name: this.config.name,
       author: event.senderID,
       messageID: data.messageID,
       groupid,
       type: 'reply'
-    })
-  );
+    });
+  });
 };

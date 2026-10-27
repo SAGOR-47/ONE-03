@@ -14,10 +14,10 @@ module.exports.run = async function ({ api, event, args, Users }) {
   function reply(d) {
     api.sendMessage(d, event.threadID, event.messageID)
   }
-  var ep = event.participantIDs;
-  msg = ""
-  msgs = ""
-  m = 0;
+  var ep = event.participantIDs || [];
+  let msg = "";
+  let msgs = "";
+  let m = 0;
   for (let i of ep) {
     m += 1;
     const name = await Users.getNameUser(i);

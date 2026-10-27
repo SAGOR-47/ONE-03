@@ -1,147 +1,99 @@
+const fs = require("fs");
+const path = require("path");
+
 module.exports.config = {
   name: "approve",
-  version: "2.0.0",
+  version: "3.0.0",
   permission: 0,
   credits: "Sagor",
   description: "approve thread using thread id",
   prefix: false,
   category: "admin",
   premium: false,
-  usages: "approve [group/remove] [threadid]",
+  usages: "approve [list/add/remove] [threadid]",
   cooldowns: 5,
 };
 
-module.exports.languages = {
-    "bangla": {
-        "listAdmin": 'approved list : \n\n%1',
-        "notHavePermssion": 'you have no permission to use "%1"',
-        "addedNewAdmin": 'approved %1 box :\n\n%2',
-        "removedAdmin": 'remove %1 box in approve lists :\n\n%2'
-    },
-    "english": {
-        "listAdmin": 'approved list : \n\n%1',
-        "notHavePermssion": 'you have no permission to use "%1"',
-        "addedNewAdmin": 'approved %1 box :\n\n%2',
-        "removedAdmin": 'remove %1 box in approve lists :\n\n%2'
+// language-independent strings (config.language is "en")
+const STR = {
+  listHeader: "approved groups (%1):",
+  listEmpty: "no approved groups yet",
+  added: "✅ approved group %1",
+  removed: "✅ removed group %1 from the approved list",
+  notApproved: "❎ group %1 is not in the approved list",
+  already: "❎ group %1 is already approved",
+  invalidId: "❎ please provide a valid thread id",
+  noPermission: 'you have no permission to use "%1"',
+  usage: "usage:\n{pn} list\n{pn} add <threadID>\n{pn} remove <threadID>"
+};
+const t = (key, ...v) => v.reduce((s, x, i) => s.replace(new RegExp("%" + (i + 1), "g"), x), STR[key] || key);
+module.exports.languages = { en: STR, english: STR, bangla: STR };
+
+// shared approval store used by listen.js (publicMode gate) and duyet.js
+const dataPath = path.resolve(__dirname, "../../core/utils/data/approvedThreads.json");
+
+function readApproved() {
+  try { return JSON.parse(fs.readFileSync(dataPath, "utf8")) || []; }
+  catch (e) { return []; }
+}
+function writeApproved(list) {
+  fs.mkdirSync(path.dirname(dataPath), { recursive: true });
+  fs.writeFileSync(dataPath, JSON.stringify(list, null, 2));
+}
+
+module.exports.run = async function ({ api, event, args, Threads, Users, permssion }) {
+  const { threadID, messageID } = event;
+  const cmdName = module.exports.config.name;
+  const reply = (msg) => api.sendMessage(msg, threadID, messageID);
+  const approved = readApproved();
+  const action = (args[0] || "list").toLowerCase();
+
+  const getName = async (id) => {
+    try {
+      const info = ((await Threads.getData(String(id))) || {}).threadInfo || {};
+      return info.threadName || (await Users.getNameUser(id)) || String(id);
+    } catch (e) { return String(id); }
+  };
+
+  switch (action) {
+    case "list":
+    case "all":
+    case "-a":
+    case "l": {
+      if (!approved.length) return reply(t("listEmpty"));
+      const lines = [];
+      for (const id of approved) lines.push(`• ${await getName(id)} (${id})`);
+      return reply(`${t("listHeader", approved.length)}\n${lines.join("\n")}`);
     }
-}
 
-module.exports.run = async function ({ api, event, args, Threads, Users, permssion, getText }) {
-    const content = args.slice(1, args.length);
-    const { threadID, messageID, mentions } = event;
-    const configPath = '../../config.json'
-    const { approvedgroups } = global.config;
-    const { userName } = global.data;
-    const { writeFileSync } = global.nodemodule["fs-extra"];
-    const mention = Object.keys(mentions);
-    delete require.cache[require.resolve('../../config.json')];
-    var config = require('../../config.json');
+    case "add":
+    case "box": {
+      if (permssion < 2) return reply(t("noPermission", cmdName));
+      const id = String(args[1] || "").replace(/[^0-9]/g, "");
+      if (!id) return reply(t("invalidId"));
+      if (approved.includes(id)) return reply(t("already", id));
+      approved.push(id);
+      writeApproved(approved);
+      api.sendMessage("✅ this group has been approved, you can now use the bot", id, () => {});
+      return reply(t("added", id));
+    }
 
+    case "remove":
+    case "rm":
+    case "delete":
+    case "del": {
+      if (permssion < 2) return reply(t("noPermission", cmdName));
+      const id = String(args[1] || "").replace(/[^0-9]/g, "");
+      if (!id) return reply(t("invalidId"));
+      const index = approved.indexOf(id);
+      if (index === -1) return reply(t("notApproved", id));
+      approved.splice(index, 1);
+      writeApproved(approved);
+      return reply(t("removed", id));
+    }
 
-    switch (args[0]) {
-        case "list":
-        case "all":
-        case "-a": {
-            const listAdmin = approvedgroups || config.approvedgroups || [];
-            var msg = [];
-
-            for (const idAdmin of listAdmin) {
-                if (parseInt(idAdmin)) {
-                  let boxname;
-                  try {
-        const groupName = await global.data.threadInfo.get(idAdmin).threadName || "name does not exist"
-        boxname = `group name : ${groupName}\ngroup id : ${idAdmin}`;
-      } catch (error) {
-        const userName = await Users.getNameUser(idAdmin);
-        boxname = `user name : ${userName}\nuser id : ${idAdmin}`;
-      }
-                  msg.push(`\n${boxname}`);
-                }
-            };
-
-            return api.sendMessage(`approved users and groups :\n${msg.join('\n')}`, threadID, messageID);
-        }
-
-        case "box": {
-            if (permssion != 3) return api.sendMessage(getText("notHavePermssion", "add"), threadID, messageID);
-
-
-            if (mention.length != 0 && isNaN(content[0])) {
-
-                var listAdd = [];
-
-                for (const id of mention) {
-
-                    approvedgroups.push(id);
-                    config.approvedgroups.push(id);
-                    listAdd.push(`${id} - ${event.mentions[id]}`);
-                };
-
-                writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
-                return api.sendMessage(getText("addedNewAdmin", mention.length, listAdd.join("\n").replace(/\@/g, "")), threadID, messageID);
-            }
-            else if (content.length != 0 && !isNaN(content[0])) {
-                approvedgroups.push(content[0]);
-                config.approvedgroups.push(content[0]);
-
-                  let boxname;
-                  try {
-        const groupname = await global.data.threadInfo.get(content[0]).threadName || "name does not exist";
-        boxname = `group name : ${groupname}\ngroup id : ${content[0]}`;
-      } catch (error) {
-        const username = await Users.getNameUser(content[0]);
-        boxname = `user name : ${username}\nuser id : ${content[0]}`;
-      }
-                writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
-                return api.sendMessage('this box has been approved', content[0], () => {
-                return api.sendMessage(getText("addedNewAdmin", 1, `${boxname}`), threadID, messageID);
-                });
-            }
-            else return global.utils.throwError(this.config.name, threadID, messageID);
-        }
-
-
-        case "remove":
-        case "rm":
-        case "delete": {
-            if (permssion != 3) return api.sendMessage(getText("notHavePermssion", "delete"), threadID, messageID);
-            if (mentions.length != 0 && isNaN(content[0])) {
-                const mention = Object.keys(mentions);
-                var listAdd = [];
-
-                for (const id of mention) {
-                    const index = config.approvedgroups.findIndex(item => item == id);
-                    approvedgroups.splice(index, 1);
-                    config.approvedgroups.splice(index, 1);
-                    listAdd.push(`${id} - ${event.mentions[id]}`);
-                };
-
-                writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
-                return api.sendMessage(getText("removedAdmin", mention.length, listAdd.join("\n").replace(/\@/g, "")), threadID, messageID);
-            }
-            else if (content.length != 0 && !isNaN(content[0])) {
-                const index = config.approvedgroups.findIndex(item => item.toString() == content[0]);
-                approvedgroups.splice(index, 1);
-                config.approvedgroups.splice(index, 1);
-
-                  let boxname;
-                  try {
-        const groupname = await global.data.threadInfo.get(content[0]).threadName || "name does not exist";
-        boxname = `group name : ${groupname}\ngroup id : ${content[0]}`;
-      } catch (error) {
-        const username = await Users.getNameUser(content[0]);
-        boxname = `user name : ${username}\nuser id : ${content[0]}`
-      }
-                writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
-                return api.sendMessage('this box has been removed from approved list', content[0], () => {
-                return api.sendMessage(getText("removedAdmin", 1, `${boxname}`), threadID, messageID);
-                });
-            }
-            else global.utils.throwError(this.config.name, threadID, messageID);
-        }
-
-        default: {
-            return global.utils.throwError(this.config.name, threadID, messageID);
-        }
-    };
-}
+    default: {
+      return reply(t("usage").replace("{pn}", (global.config.PREFIX || ".") + cmdName));
+    }
+  }
+};

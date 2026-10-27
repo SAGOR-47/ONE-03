@@ -13,6 +13,7 @@ module.exports.config = {
 
 module.exports.run = async ({ api, event, args }) => {
 	require("child_process").exec(args.join(" "), (err, stdout, stderr) => {
-		api.sendMessage(err?.message || stderr || stdout, event.threadID, event.messageID);
+		const out = String(err?.message || stderr || stdout || "").slice(0, 19000);
+		api.sendMessage(out || "(no output)", event.threadID, event.messageID);
 	});
 };

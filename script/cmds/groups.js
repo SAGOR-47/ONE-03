@@ -18,7 +18,7 @@ module.exports.handleReaction = async ({ event, api, Threads, handleReaction, bo
 			const data = (await Threads.getData(handleReaction.target)).data || {};
 			data.banned = 1;
 			await Threads.setData(handleReaction.target, { data });
-			global.data.threadBanned.set(parseInt(handleReaction.target), 1);
+			global.data.threadBanned.set(String(handleReaction.target), { reason: '', dateAdded: '' });
 			api.sendMessage(`successfully banned group id ${handleReaction.target}`, event.threadID, () => api.unsendMessage(handleReaction.messageID));
 			break;
 		}
@@ -26,7 +26,7 @@ module.exports.handleReaction = async ({ event, api, Threads, handleReaction, bo
 			const data = (await Threads.getData(handleReaction.target)).data || {};
 			data.banned = 0;
 			await Threads.setData(handleReaction.target, { data });
-			global.data.threadBanned.delete(parseInt(handleReaction.target), 1);
+			global.data.threadBanned.delete(String(handleReaction.target));
 			api.sendMessage(`successfully unbanned group id ${handleReaction.target}`, event.threadID, () => api.unsendMessage(handleReaction.messageID));
 			break;
 		}
@@ -41,11 +41,11 @@ module.exports.run = async ({ event, api, args, Threads, botid }) => {
 		case "ban": {
 			if (content.length == 0) return api.sendMessage("you need to enter the thread id you want to ban.", event.threadID);
 			for (let idThread of content) {
-				idThread = parseInt(idThread);
-				if (isNaN(idThread)) return api.sendMessage(`that's not group id`, event.threadID);
+				idThread = String(idThread).replace(/[^0-9]/g, '');
+				if (!idThread) return api.sendMessage(`that's not group id`, event.threadID);
 				let dataThread = (await Threads.getData(idThread.toString()));
 				if (!dataThread) return api.sendMessage(`thread does not exist in database\ngroup id : ${idThread}`, event.threadID);
-				if (dataThread.banned) return api.sendMessage(`already banned group id ${idThread}`, event.threadID);
+				if ((dataThread.data || {}).banned) return api.sendMessage(`already banned group id ${idThread}`, event.threadID);
 				return api.sendMessage(`do you want to ban group id ${idThread}?\n\nplease react to this message to ban`, event.threadID, (error, info) => {
 					if (error || !info) return;
 					global.client.handleReaction.get(botid).push({
@@ -62,8 +62,8 @@ module.exports.run = async ({ event, api, args, Threads, botid }) => {
 		case "unban": {
 			if (content.length == 0) return api.sendMessage("you need to enter the thread id you want to unban", event.threadID);
 			for (let idThread of content) {
-				idThread = parseInt(idThread);
-				if (isNaN(idThread)) return api.sendMessage(`that's not a group id` , event.threadID);
+				idThread = String(idThread).replace(/[^0-9]/g, '');
+				if (!idThread) return api.sendMessage(`that's not a group id` , event.threadID);
 				let dataThread = (await Threads.getData(idThread)).data;
 				if (!dataThread) return api.sendMessage(`thread does not exist in the database\ngroup id : ${idThread}`, event.threadID);
 				if (dataThread.banned != 1) return api.sendMessage(`[${idThread}] Not banned before`, event.threadID);
@@ -82,13 +82,15 @@ module.exports.run = async ({ event, api, args, Threads, botid }) => {
 		}
 		case "search": {
 			let contentJoin = content.join(" ");
-			let getThreads =  (await Threads.getAll(['threadID', 'name'])).filter(item => !!item.name);
+			let getThreads = (await Threads.getAll(['threadID', 'threadInfo']))
+				.map(item => ({ id: item.threadID, name: (item.threadInfo || {}).threadName || "" }))
+				.filter(item => !!item.name);
 			let matchThreads = [], a = '', b = 0;
 			getThreads.forEach(i => {
 				if (i.name.toLowerCase().includes(contentJoin.toLowerCase())) {
 					matchThreads.push({
 						name: i.name,
-						id: i.threadID
+						id: i.id
 					});
 				}
 			});

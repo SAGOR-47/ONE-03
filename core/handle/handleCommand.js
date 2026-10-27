@@ -6,7 +6,7 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
     if (event.messageID && isBotMessage(event.messageID)) return; // ignore messages the bot sent itself (noprefix loop guard)
     const dateNow = Date.now()
     const time = moment.tz("Asia/Dhaka").format("HH:mm:ss DD/MM/YYYY");
-    const { allowInbox, PREFIX, ADMINBOT, NDH, DeveloperMode, adminOnly } = global.config;
+    const { allowInbox, PREFIX, ADMINBOT, NDH, DeveloperMode } = global.config;
     const { userBanned, threadBanned, threadInfo, threadData, commandBanned } = global.data;
     const { commands, cooldowns } = global.client;
     // safely unsend a bot notice after a delay (no crash if send failed)
@@ -78,7 +78,11 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
             const commandValues = commands['keys'](); 
             for (const cmd of commandValues) allCommandName.push(cmd)
             const checker = stringSimilarity.findBestMatch(commandName, allCommandName);
-            if (checker.bestMatch.rating >= 0.5) command = global.client.commands.get(checker.bestMatch.target);
+            const best = global.client.commands.get(checker.bestMatch.target);
+            // only auto-run the fuzzy match for public (permission 0) commands;
+            // privileged commands are suggested but never executed automatically
+            const bestLevel = Number(best?.config?.hasPermssion ?? best?.config?.permission ?? best?.config?.role ?? 0);
+            if (checker.bestMatch.rating >= 0.5 && bestLevel === 0) command = best;
             else return api.sendMessage(global.getText("handleCommand", "commandNotExistSuggest", checker.bestMatch.target), threadID, messageID);
         }  
         // ----- global user ban (ban.js): warn once, then silent -----
@@ -138,7 +142,7 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
                  }, messageID);
         }
         if (!global.client.cooldowns.has(command.config.name)) global.client.cooldowns.set(command.config.name, new Map());
-        const timestamps = global.client.cooldowns.get(command.config.name);;
+        const timestamps = global.client.cooldowns.get(command.config.name);
         const expirationTime = (command.config.cooldowns || 1) * 1000;
         if (timestamps.has(senderID) && dateNow < timestamps.get(senderID) + expirationTime) 
         return api.setMessageReaction('😼', event.messageID, err => (err) ? logger(global.getText("handleCommand", "cantSetMessageReaction", err.message || err), 2) : '', !![]);
@@ -146,7 +150,7 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
         if (command.languages && typeof command.languages == 'object' && command.languages.hasOwnProperty(global.config.language)) 
             getText2 = (...values) => {
             var lang = command.languages[global.config.language][values[0]] || '';
-            for (var i = values.length; i > 0x2533 + 0x1105 + -0x3638; i--) {
+            for (var i = values.length; i > 0; i--) {
                 const expReg = RegExp('%' + i, 'g');
                 lang = lang.replace(expReg, values[i]);
             }
