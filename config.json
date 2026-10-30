@@ -10,10 +10,10 @@
             "😾"
         ],
         "kick": [
-        "🖕",
-        "🦶",
-        "🦵",
-        "💋"
+            "🖕",
+            "🦶",
+            "🦵",
+            "💋"
         ]
     },
     "whiteListMode": {
@@ -29,7 +29,7 @@
         "port": 12001
     },
     "telegram": {
-        "enable": true,
+        "enable": false,
         "botToken": "",
         "chatId": ""
     },
@@ -66,5 +66,5 @@
         "updatePresence": true
     },
     "version": "3.0.0",
-    "autoInstallMissingPackages": true
+    "autoInstallMissingPackages": false
 }

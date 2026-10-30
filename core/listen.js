@@ -94,34 +94,44 @@ module.exports = function({
   return async function(event) {
    try {
     logEvent(event, logger);
-    const a = path.join(__dirname, '/utils/data/approvedThreads.json');
-    const b = path.join(__dirname, '/utils/data/pendingThreads.json');
-    if (!fs.existsSync(a)) {
-      fs.writeFileSync(a, JSON.stringify([]), 'utf-8');
-    }
-    if (!fs.existsSync(b)) {
-      fs.writeFileSync(b, JSON.stringify([]), 'utf-8');
-    }
-    const c = JSON.parse(fs.readFileSync(a, 'utf-8'));
-    const d = global.config.ADMINBOT;
-    const e = global.config.NDH;
-    const f = global.config.BOXADMIN;
-    if (!global.config.publicMode && !c.includes(event.threadID) && !d.includes(event.senderID) && !e.includes(event.senderID)) {
+    const dataDirectory = path.join(__dirname, 'utils', 'data');
+    const approvedPath = path.join(dataDirectory, 'approvedThreads.json');
+    const pendingPath = path.join(dataDirectory, 'pendingThreads.json');
+    fs.mkdirSync(dataDirectory, { recursive: true });
+    const readList = (file) => {
+      try {
+        const value = JSON.parse(fs.readFileSync(file, 'utf-8'));
+        return Array.isArray(value) ? value.map(String) : [];
+      } catch (error) {
+        if (error.code !== 'ENOENT') logger(`Could not read ${path.basename(file)}: ${error.message}`, 'warn');
+        return [];
+      }
+    };
+    const writeList = (file, value) => fs.writeFileSync(file, JSON.stringify(value, null, 2), 'utf-8');
+    if (!fs.existsSync(approvedPath)) writeList(approvedPath, []);
+    if (!fs.existsSync(pendingPath)) writeList(pendingPath, []);
+    const approvedThreads = readList(approvedPath);
+    const admins = (global.config.ADMINBOT || []).map(String);
+    const supporters = (global.config.NDH || []).map(String);
+    const boxAdmin = String(global.config.BOXADMIN || '');
+    const threadID = String(event.threadID);
+    const senderID = String(event.senderID);
+    if (!global.config.publicMode && !approvedThreads.includes(threadID) && !admins.includes(senderID) && !supporters.includes(senderID)) {
       const i = (await Threads.getData(String(event.threadID))).data || {};
       const j = i.hasOwnProperty('PREFIX') ? i.PREFIX : global.config.PREFIX;
       const k = global.config.BOTNAME;
       if (event.body && event.body.toLowerCase() === 'duyetbox') {
-        api.sendMessage(`[ Notification ]\n\n📜 Approval request from box ID: ${event.threadID}`, f);
+        api.sendMessage(`[ Notification ]\n\n📜 Approval request from box ID: ${threadID}`, boxAdmin);
         return api.sendMessage(`✅ Approval request sent to admin!`, event.threadID, async (err, info) => {
           if (err) console.error(err);
           await new Promise(resolve => setTimeout(resolve, 10 * 1000));
           if (info?.messageID) {
             Promise.resolve().then(() => api.unsendMessage(info.messageID, event.threadID)).catch(() => {});
           }
-          let l = JSON.parse(fs.readFileSync(b, 'utf-8'));
-          if (!l.includes(event.threadID)) {
-            l.push(event.threadID);
-            fs.writeFileSync(b, JSON.stringify(l, null, 2), 'utf-8');
+          const latestPendingThreads = readList(pendingPath);
+          if (!latestPendingThreads.includes(threadID)) {
+            latestPendingThreads.push(threadID);
+            writeList(pendingPath, latestPendingThreads);
           }
         });
       }

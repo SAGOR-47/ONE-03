@@ -21,8 +21,8 @@ A Facebook Messenger chatbot built on the Mirai V3 framework, customized with au
 
 ```sh
 # 1. Clone the repo
-git clone https://github.com/SAGOR-OFFICIAL-09/mirai-bot-v3.git
-cd mirai-bot-v3
+git clone https://github.com/SAGOR-47/ONE-03.git
+cd ONE-03
 
 # 2. Install dependencies
 npm install
@@ -38,6 +38,9 @@ npm install
 # 5. Start the bot
 npm start
 ```
+
+Run `npm run check` to validate JavaScript syntax, JSON files, and core configuration.
+Run `npm test` to run those checks plus the vendored FCA tests.
 
 > ⚠️ **Never commit or share your Facebook cookie** — anyone with it can access your account.
 > If a cookie was committed to a public repository, rotate the session; removing the file
@@ -96,7 +99,7 @@ All settings live in `config.json`:
 
 - The bot reads the session from `FACEBOOK_COOKIE` or a local `cookie.txt` file. Keep either secret private.
 - Timezone is fixed to **Asia/Dhaka**.
-- `package-lock.json` and the database file are auto-generated — no need to commit them.
+- Commit `package-lock.json` so deployments use the reviewed dependency tree. Database and session files are runtime data and must stay untracked.
 
 ## 📄 License
 
