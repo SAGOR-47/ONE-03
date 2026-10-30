@@ -8,13 +8,20 @@ module.exports = function ({ api, Threads }) {
   cron.schedule('*/10 * * * *', async () => {
    try {
     const cc = path.join(__dirname, '..', 'utils', 'data', 'check_data.json');
-    const currentTime = moment().tz('Asia/Dhaka').format('YYYY-MM-DD HH:mm:ss');
+    const now = moment().tz('Asia/Dhaka');
+    const currentTime = now.format('YYYY-MM-DD HH:mm:ss');
     let lastRunTime = null;
     if (fs.existsSync(cc)) {
-        const { datetime } = JSON.parse(fs.readFileSync(cc, 'utf-8'));
-        lastRunTime = datetime;
+        try {
+            const saved = JSON.parse(fs.readFileSync(cc, 'utf-8'));
+            if (typeof saved?.datetime === 'string') {
+                lastRunTime = moment.tz(saved.datetime, 'YYYY-MM-DD HH:mm:ss', 'Asia/Dhaka');
+            }
+        } catch (error) {
+            logger(`Could not read thread sync timestamp: ${error.message}`, '[ DATA ] >');
+        }
     }
-    if (!lastRunTime || moment(currentTime).diff(moment(lastRunTime), 'minutes') >= 10) {
+    if (!lastRunTime?.isValid() || now.diff(lastRunTime, 'minutes') >= 10) {
         const groupList = (await api.getThreadList(100, null, ['INBOX'])).filter(group => group.isSubscribed && group.isGroup);
         let dataChanged = false;
         for (const { threadID } of groupList) {
@@ -25,9 +32,9 @@ module.exports = function ({ api, Threads }) {
                 dataChanged = true;
             }
         }
+        fs.mkdirSync(path.dirname(cc), { recursive: true });
+        fs.writeFileSync(cc, JSON.stringify({ datetime: currentTime }), 'utf-8');
         if (dataChanged) {
-            fs.mkdirSync(path.dirname(cc), { recursive: true });
-            fs.writeFileSync(cc, JSON.stringify({ datetime: currentTime }));
             logger(`Auto updating data of ${groupList.length} threads`, '[ DATA ] >');
         }
     }
